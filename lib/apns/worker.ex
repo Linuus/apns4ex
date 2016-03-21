@@ -40,6 +40,8 @@ defmodule APNS.Worker do
       |> Dict.put(:password, to_char_list(config.cert_password))
     end
 
+    {:ok, queue_pid} = APNS.Queue.start_link
+
     state = %{
       config: config,
       ssl_opts: ssl_opts,
@@ -47,6 +49,7 @@ defmodule APNS.Worker do
       socket_apple: nil,
       buffer_feedback: "",
       buffer_apple: "",
+      queue: queue_pid,
       counter: 0
     }
     send self, :connect_apple
@@ -107,6 +110,9 @@ defmodule APNS.Worker do
       <<8 :: 8, status :: 8, msg_id :: binary-4, rest :: binary>> ->
         APNS.Error.new(msg_id, status)
         |> state.config.callback_module.error()
+        for message <- APNS.Queue.get_resends(state.queue, msg_id) do
+          GenServer.cast(self(), message)
+        end
         case rest do
           "" -> {:noreply, state}
           _ -> handle_info({:ssl, socket, rest}, %{state | buffer_apple: ""})
@@ -131,12 +137,12 @@ defmodule APNS.Worker do
     end
   end
 
-  def handle_call(%APNS.Message{token: token} = msg, _from, state) when byte_size(token) != 64 do
+  def handle_cast(%APNS.Message{token: token} = msg, _from, state) when byte_size(token) != 64 do
     APNS.Error.new(msg.id, 5)
     |> state.config.callback_module.error()
     {:reply, :ok, state}
   end
-  def handle_call(%APNS.Message{} = msg, _from, %{config: config} = state) do
+  def handle_cast(%APNS.Message{} = msg, _from, %{config: config} = state) do
     limit = case msg.support_old_ios do
       nil -> config.payload_limit
       true -> @payload_max_old
@@ -148,7 +154,7 @@ defmodule APNS.Worker do
         |> state.config.callback_module.error()
         {:reply, :ok, state}
       payload ->
-        send_message(state.socket_apple, msg, payload)
+        send_message(state.socket_apple, msg, payload, state.queue)
         if (state.counter >= state.config.reconnect_after) do
           Logger.debug "[APNS] #{state.counter} messages sent, reconnecting"
           send self, :connect_apple
@@ -247,7 +253,7 @@ defmodule APNS.Worker do
     alert
   end
 
-  defp send_message(socket, msg, payload) do
+  defp send_message(socket, msg, payload, queue) do
     token_bin = msg.token |> Base.decode16!(case: :mixed)
     frame = <<
       1                  :: 8,
@@ -274,8 +280,12 @@ defmodule APNS.Worker do
 
     result = :ssl.send(socket, [packet])
     case result do
-      :ok -> Logger.debug("[APNS] success sent to #{msg.token}")
-      {:error, reason} -> Logger.error("[APNS] error (#{reason}) sending to #{msg.token}")
+      :ok ->
+        APNS.Queue.add(queue, msg)
+        Logger.debug("[APNS] success sent to #{msg.token}")
+      {:error, reason} ->
+        APNS.Queue.get_resends(queue, msg.id)
+        Logger.error("[APNS] error (#{reason}) sending to #{msg.token}")
     end
 
     result
