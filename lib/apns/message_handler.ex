@@ -4,14 +4,14 @@ defmodule APNS.MessageHandler do
   @payload_max_old 256
   @payload_max_new 2048
 
-  def connect(%{config: config, ssl_opts: opts} = state) do
-    ssl_close(state.socket_apple)
+  def connect(%{config: config, ssl_opts: opts} = state, sender \\ APNS.Sender) do
+    sender.close(state.socket_apple)
     host = to_char_list(config.apple_host)
     port = config.apple_port
     timeout = config.timeout * 1000
     address = "#{config.apple_host}:#{config.apple_port}"
 
-    case APNS.Sender.connect_socket(host, port, opts, timeout) do
+    case sender.connect_socket(host, port, opts, timeout) do
       {:ok, socket} ->
         Logger.debug "[APNS] connected to #{address}"
         {:ok, socket}
@@ -45,8 +45,8 @@ defmodule APNS.MessageHandler do
         sender.send_package(socket, binary_payload, msg, queue)
 
         if state.counter >= state.config.reconnect_after do
-          Logger.debug "[APNS] #{state.counter} messages sent, reconnecting"
-          send self, :connect_apple
+          Logger.debug("[APNS] #{state.counter} messages sent, reconnecting")
+          connect(state, sender)
         end
 
         %{state | counter: state.counter + 1}
@@ -71,7 +71,4 @@ defmodule APNS.MessageHandler do
         %{state | buffer_apple: buffer}
     end
   end
-
-  defp ssl_close(nil), do: nil
-  defp ssl_close(socket), do: :ssl.close(socket)
 end

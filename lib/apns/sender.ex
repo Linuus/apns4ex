@@ -20,4 +20,12 @@ defmodule APNS.Sender do
   def connect_socket(host, port, opts, timeout) do
     :ssl.connect(host, port, opts, timeout)
   end
+
+  def close(nil) do
+    nil
+  end
+
+  def close(socket) do
+    :ssl.close(socket)
+  end
 end

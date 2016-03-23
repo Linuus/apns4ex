@@ -12,11 +12,15 @@ defmodule APNS.MessageHandlerTest do
       config: %{
         callback_module: APNS.Callback,
         payload_limit: 2048,
-        reconnect_after: 3
+        reconnect_after: 3,
+        apple_host: "host.apple",
+        apple_port: 2195,
+        timeout: 10
       },
       socket_apple: "socket",
       queue: queue_pid,
-      counter: 0
+      counter: 0,
+      ssl_opts: %{}
     }
     token = String.duplicate("0", 64)
     message =
@@ -60,6 +64,14 @@ defmodule APNS.MessageHandlerTest do
     assert output =~ ~s(token: "#{token}")
     assert output =~ ~s(alert: "Lorem ipsum dolor sit amet)
     assert output =~ ~s(queque: #{inspect(queue_pid)})
+  end
+
+  test "push reconnects after configured amount of pushes", %{state: state, message: message} do
+    state = MessageHandler.push(message, state, APNS.FakeSender)
+    state = MessageHandler.push(message, state, APNS.FakeSender)
+    state = MessageHandler.push(message, state, APNS.FakeSender)
+    output = capture_log(fn -> MessageHandler.push(message, state, APNS.FakeSender) end)
+    assert output =~ ~s([APNS] 3 messages sent, reconnecting)
   end
 
   test "handle_response calls error callback if status byte is 0", %{queue_pid: queue_pid} do
