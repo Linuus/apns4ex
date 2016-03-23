@@ -7,10 +7,48 @@ defmodule APNS.MessageHandlerTest do
 
   setup do
     {:ok, queue_pid} = APNS.Queue.start_link()
+
+    state = %{
+      config: %{
+        callback_module: APNS.Callback,
+        payload_limit: 2048
+      },
+      socket_apple: "socket",
+      queue: queue_pid
+    }
+    message =
+      %APNS.Message{}
+      |> Map.put(:token, String.duplicate("0", 64))
+      |> Map.put(:alert, "Lorem ipsum dolor sit amet, consectetur adipisicing elit")
+      |> Map.put(:id, 23)
+
     {:ok, %{
       queue_pid: queue_pid,
-      apple_success_buffer: <<0 :: 8, 0 :: 8, "1337" :: binary>>
+      apple_success_buffer: <<0 :: 8, 0 :: 8, "1337" :: binary>>,
+      state: state,
+      message: message
     }}
+  end
+
+  test "push calls error callback if token is invalid size", %{state: state, message: message} do
+    message = Map.put(message, :token, String.duplicate("0", 63))
+    output = capture_log(fn -> MessageHandler.push(message, state) end)
+    assert output =~ ~s([APNS] Error "Invalid token size" for message 23)
+  end
+
+  @tag :pending # shouldn't this pass? See APNS.Payload.to_json
+  test "push calls error callback if payload is too big", %{state: state, message: message} do
+    state = put_in(state, [:config, :payload_limit], 50)
+    output = capture_log(fn -> MessageHandler.push(message, state) end)
+    assert output =~ ~s([APNS] Error "Invalid payload size" for message 23)
+  end
+
+  @tag :pending # shouldn't this pass? See APNS.Payload.to_json
+  test "push calls error callback if payload size can be set per message", %{state: state, message: message} do
+    message = Map.put(message, :support_old_ios, true)
+    message = Map.put(message, :alert, String.duplicate("0", 2000))
+    output = capture_log(fn -> MessageHandler.push(message, state) end)
+    assert output =~ ~s([APNS] Error "Invalid payload size" for message 23)
   end
 
   test "handle_response calls error callback if status byte is 0", %{queue_pid: queue_pid} do
@@ -102,7 +140,7 @@ defmodule APNS.MessageHandlerTest do
     assert output =~ ~s([APNS] Error "Invalid payload size" for message "1234")
   end
 
-  @tag :pending
+  @tag :pending # should we support this case?
   test "handle_response iteration works with error response after success", %{queue_pid: queue_pid, apple_success_buffer: apple_success_buffer} do
     state = %{buffer_apple: apple_success_buffer, config: %{callback_module: APNS.Callback}, queue: queue_pid}
     package1 = apple_buffer(8)
@@ -114,7 +152,7 @@ defmodule APNS.MessageHandlerTest do
     assert output =~ ~s([APNS] Error "Invalid payload size" for message "1234")
   end
 
-  @tag :pending
+  @tag :pending # should we support this case?
   test "handle_response iteration works with success response after error", %{queue_pid: queue_pid, apple_success_buffer: apple_success_buffer} do
     state = response_state(6, queue_pid)
     package1 = apple_buffer(8)
