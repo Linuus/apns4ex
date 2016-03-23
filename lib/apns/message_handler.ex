@@ -21,12 +21,6 @@ defmodule APNS.MessageHandler do
     end
   end
 
-  def reconnect(state) do
-    Logger.debug "[APNS] Apple socket was closed"
-    # In case there's some error it will be caught at the following function and the server will stop
-    connect(%{state | socket_apple: nil})
-  end
-
   def push(%APNS.Message{token: token} = msg, state) when byte_size(token) != 64 do
     APNS.Error.new(msg.id, 5) |> state.config.callback_module.error()
     state

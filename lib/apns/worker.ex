@@ -33,14 +33,8 @@ defmodule APNS.Worker do
     end
   end
 
-  def handle_info({:ssl_closed, socket}, %{socket_apple: socket, config: %{timeout: timeout}} = state) do
-    case APNS.MessageHandler.reconnect(state) do
-      {:ok, _socket} ->
-        {:noreply, state}
-      {:error, reason} ->
-        :timer.sleep(timeout) # TODO: why?
-        {:stop, reason, state}
-    end
+  def handle_info({:ssl_closed, socket}, %{socket_apple: socket} = state) do
+    handle_info(:connect_apple, %{state | socket_apple: nil})
   end
 
   def handle_info({:ssl_closed, socket}, %{socket_feedback: socket, config: %{feedback_interval: interval}} = state) do
