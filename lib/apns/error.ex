@@ -1,7 +1,7 @@
 defmodule APNS.Error do
   @statuses %{
     0 => "No errors encountered",
-    1 => "Processing",
+    1 => "Processing error",
     2 => "Missing device token",
     3 => "Missing topic",
     4 => "Missing payload",

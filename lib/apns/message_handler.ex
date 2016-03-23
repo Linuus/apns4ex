@@ -16,7 +16,7 @@ defmodule APNS.MessageHandler do
         Logger.debug "[APNS] connected to #{address}"
         {:ok, socket}
       {:error, reason} ->
-        Logger.error "[APNS] failed to connect #{address}, reason given: #{inspect reason}"
+        Logger.error "[APNS] failed to connect to push socket #{address}, reason given: #{inspect reason}"
         {:error, {:connection_failed, address}}
     end
   end
@@ -37,6 +37,7 @@ defmodule APNS.MessageHandler do
       {:error, :payload_size_exceeded} ->
         APNS.Error.new(msg.id, 7) |> state.config.callback_module.error()
         state
+
       payload ->
         binary_payload = APNS.Payload.to_binary(msg, payload)
         APNS.Sender.send_package(socket, binary_payload, msg, queue)
@@ -50,13 +51,13 @@ defmodule APNS.MessageHandler do
     end
   end
 
-  def handle_response(state, socket, data) do
+  def handle_response(state, socket, data, worker_pid \\ self()) do
     case <<state.buffer_apple :: binary, data :: binary>> do
       <<8 :: 8, status :: 8, msg_id :: binary-4, rest :: binary>> ->
         APNS.Error.new(msg_id, status) |> state.config.callback_module.error()
 
         for message <- APNS.Queue.messages_after(state.queue, msg_id) do
-          GenServer.cast(self(), message)
+          GenServer.cast(worker_pid, message)
         end
 
         case rest do

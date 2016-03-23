@@ -14,7 +14,7 @@ defmodule APNS.FeedbackHandler do
         Logger.debug "[APNS] connected to #{address}"
         {:ok, socket}
       {:error, reason} ->
-        Logger.error "[APNS] failed to connect #{address}, reason given: #{inspect reason}"
+        Logger.error "[APNS] failed to connect to feedback socket #{address}, reason given: #{inspect reason}"
         {:error, {:connection_failed, address}}
     end
   end
