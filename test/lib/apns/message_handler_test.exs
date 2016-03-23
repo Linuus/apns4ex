@@ -11,14 +11,17 @@ defmodule APNS.MessageHandlerTest do
     state = %{
       config: %{
         callback_module: APNS.Callback,
-        payload_limit: 2048
+        payload_limit: 2048,
+        reconnect_after: 3
       },
       socket_apple: "socket",
-      queue: queue_pid
+      queue: queue_pid,
+      counter: 0
     }
+    token = String.duplicate("0", 64)
     message =
       %APNS.Message{}
-      |> Map.put(:token, String.duplicate("0", 64))
+      |> Map.put(:token, token)
       |> Map.put(:alert, "Lorem ipsum dolor sit amet, consectetur adipisicing elit")
       |> Map.put(:id, 23)
 
@@ -26,7 +29,8 @@ defmodule APNS.MessageHandlerTest do
       queue_pid: queue_pid,
       apple_success_buffer: <<0 :: 8, 0 :: 8, "1337" :: binary>>,
       state: state,
-      message: message
+      message: message,
+      token: token
     }}
   end
 
@@ -36,9 +40,8 @@ defmodule APNS.MessageHandlerTest do
     assert output =~ ~s([APNS] Error "Invalid token size" for message 23)
   end
 
-  @tag :pending # shouldn't this pass? See APNS.Payload.to_json
   test "push calls error callback if payload is too big", %{state: state, message: message} do
-    state = put_in(state, [:config, :payload_limit], 50)
+    state = put_in(state, [:config, :payload_limit], 10)
     output = capture_log(fn -> MessageHandler.push(message, state) end)
     assert output =~ ~s([APNS] Error "Invalid payload size" for message 23)
   end
@@ -49,6 +52,14 @@ defmodule APNS.MessageHandlerTest do
     message = Map.put(message, :alert, String.duplicate("0", 2000))
     output = capture_log(fn -> MessageHandler.push(message, state) end)
     assert output =~ ~s([APNS] Error "Invalid payload size" for message 23)
+  end
+
+  test "push sends payload to Apple", %{state: state, message: message, token: token, queue_pid: queue_pid} do
+    output = capture_log(fn -> MessageHandler.push(message, state, APNS.FakeSender) end)
+    assert output =~ ~s(APNS.FakeSender.send_package/4)
+    assert output =~ ~s(token: "#{token}")
+    assert output =~ ~s(alert: "Lorem ipsum dolor sit amet)
+    assert output =~ ~s(queque: #{inspect(queue_pid)})
   end
 
   test "handle_response calls error callback if status byte is 0", %{queue_pid: queue_pid} do

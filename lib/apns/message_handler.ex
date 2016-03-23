@@ -21,12 +21,14 @@ defmodule APNS.MessageHandler do
     end
   end
 
-  def push(%APNS.Message{token: token} = msg, state) when byte_size(token) != 64 do
+  def push(_message, _state, sender \\ APNS.Sender)
+
+  def push(%APNS.Message{token: token} = msg, state, _sender) when byte_size(token) != 64 do
     APNS.Error.new(msg.id, 5) |> state.config.callback_module.error()
     state
   end
 
-  def push(%APNS.Message{} = msg, %{config: config, socket_apple: socket, queue: queue} = state) do
+  def push(%APNS.Message{} = msg, %{config: config, socket_apple: socket, queue: queue} = state, sender) do
     limit = case msg.support_old_ios do
       nil -> config.payload_limit
       true -> @payload_max_old
@@ -40,7 +42,7 @@ defmodule APNS.MessageHandler do
 
       payload ->
         binary_payload = APNS.Payload.to_binary(msg, payload)
-        APNS.Sender.send_package(socket, binary_payload, msg, queue)
+        sender.send_package(socket, binary_payload, msg, queue)
 
         if state.counter >= state.config.reconnect_after do
           Logger.debug "[APNS] #{state.counter} messages sent, reconnecting"
