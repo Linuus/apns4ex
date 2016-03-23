@@ -18,7 +18,7 @@ defmodule APNS.Worker do
       {:ok, socket} ->
         {:noreply, %{state | socket_apple: socket, counter: 0}}
       {:error, reason} ->
-        :timer.sleep(timeout) # TODO: why?
+        :timer.sleep(timeout * 1000) # TODO: why?
         {:stop, reason, state}
     end
   end

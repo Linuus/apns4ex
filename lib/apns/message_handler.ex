@@ -41,9 +41,8 @@ defmodule APNS.MessageHandler do
 
     case APNS.Payload.build_json(msg, limit) do
       {:error, :payload_size_exceeded} ->
-        APNS.Error.new(msg.id, 7)
-        |> state.config.callback_module.error()
-        {:noreply, state}
+        APNS.Error.new(msg.id, 7) |> state.config.callback_module.error()
+        state
       payload ->
         binary_payload = APNS.Payload.to_binary(msg, payload)
         APNS.Sender.send_package(socket, binary_payload, msg, queue)
