@@ -2,8 +2,11 @@ defmodule APNS.MessageHandlerTest do
   use ExUnit.Case
 
   alias APNS.MessageHandler
+  alias APNS.FakeSender
 
   import ExUnit.CaptureLog
+
+  @moduletag :capture_log
 
   setup do
     {:ok, queue_pid} = APNS.Queue.start_link()
@@ -38,6 +41,30 @@ defmodule APNS.MessageHandlerTest do
     }}
   end
 
+  test "connect calls close before connecting", %{state: state} do
+    output = capture_log(fn -> MessageHandler.connect(state, FakeSender) end)
+    assert output =~ ~s(APNS.FakeSender.close)
+    assert output =~ ~s(APNS.FakeSender.connect_socket)
+  end
+
+  test "connect connects to configured host", %{state: state} do
+    output = capture_log(fn -> MessageHandler.connect(state, FakeSender) end)
+    assert output =~ ~s(APNS.FakeSender.connect_socket/4)
+    assert output =~ ~s(host: 'host.apple')
+    assert output =~ ~s(port: 2195)
+    assert output =~ ~s(opts: %{})
+    assert output =~ ~s(timeout: 10000)
+  end
+
+  test "connect returns ok if connection succeeded", %{state: state} do
+    assert MessageHandler.connect(state, FakeSender) == {:ok, %{}}
+  end
+
+  test "connect returns error if connection failed", %{state: state} do
+    result = MessageHandler.connect(state, APNS.FakeSenderConnectFail)
+    assert result == {:error, {:connection_failed, "host.apple:2195"}}
+  end
+
   test "push calls error callback if token is invalid size", %{state: state, message: message} do
     message = Map.put(message, :token, String.duplicate("0", 63))
     output = capture_log(fn -> MessageHandler.push(message, state) end)
@@ -67,11 +94,19 @@ defmodule APNS.MessageHandlerTest do
   end
 
   test "push reconnects after configured amount of pushes", %{state: state, message: message} do
-    state = MessageHandler.push(message, state, APNS.FakeSender)
-    state = MessageHandler.push(message, state, APNS.FakeSender)
-    state = MessageHandler.push(message, state, APNS.FakeSender)
-    output = capture_log(fn -> MessageHandler.push(message, state, APNS.FakeSender) end)
+    state = MessageHandler.push(message, state, FakeSender)
+    state = MessageHandler.push(message, state, FakeSender)
+    state = MessageHandler.push(message, state, FakeSender)
+    output = capture_log(fn -> MessageHandler.push(message, state, FakeSender) end)
     assert output =~ ~s([APNS] 3 messages sent, reconnecting)
+    assert output =~ ~s(APNS.FakeSender.close/)
+    assert output =~ ~s(APNS.FakeSender.connect_socket)
+  end
+
+  test "push counts number of pushes", %{state: state, message: message} do
+    state = MessageHandler.push(message, state, FakeSender)
+    state = MessageHandler.push(message, state, FakeSender)
+    assert state.counter == 2
   end
 
   test "handle_response calls error callback if status byte is 0", %{queue_pid: queue_pid} do
