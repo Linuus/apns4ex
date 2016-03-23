@@ -15,20 +15,20 @@ defmodule APNS.Worker do
 
   def handle_info(:connect_apple, %{config: %{timeout: timeout}} = state) do
     case APNS.MessageHandler.connect(state) do
-      {:ok, state} ->
-        {:noreply, state}
+      {:ok, socket} ->
+        {:noreply, %{state | socket_apple: socket, counter: 0}}
       {:error, reason} ->
         :timer.sleep(timeout) # TODO: why?
         {:stop, reason, state}
     end
   end
 
-  def handle_info(:connect_feedback, %{config: %{timeout: timeout}} = state) do
+  def handle_info(:connect_feedback, %{config: config} = state) do
     case APNS.FeedbackHandler.connect(state) do
       {:ok, socket} ->
-        {:noreply, %{state | socket_feedback: socket, counter: 0}}
+        {:noreply, %{state | socket_feedback: socket}}
       {:error, reason} ->
-        :timer.sleep(timeout) # TODO: why?
+        :timer.sleep(config.timeout * 1000) # TODO: why?
         {:stop, reason, state}
     end
   end
