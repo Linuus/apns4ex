@@ -1,15 +1,15 @@
 defmodule APNS.FeedbackHandler do
   require Logger
 
-  def connect(%{config: config, ssl_opts: opts} = state) do
-    ssl_close(state.socket_feedback)
+  def connect(%{config: config, ssl_opts: opts} = state, sender \\ APNS.Sender) do
+    sender.close(state.socket_feedback)
     host = to_char_list(config.feedback_host)
     port = config.feedback_port
     opts = Keyword.delete(opts, :reuse_sessions)
     timeout = config.timeout * 1000
     address = "#{config.feedback_host}:#{config.feedback_port}"
 
-    case APNS.Sender.connect_socket(host, port, opts, timeout) do
+    case sender.connect_socket(host, port, opts, timeout) do
       {:ok, socket} ->
         Logger.debug "[APNS] connected to #{address}"
         {:ok, socket}
@@ -35,7 +35,4 @@ defmodule APNS.FeedbackHandler do
         %{state | buffer_feedback: buffer}
     end
   end
-
-  defp ssl_close(nil), do: nil
-  defp ssl_close(socket), do: :ssl.close(socket)
 end
