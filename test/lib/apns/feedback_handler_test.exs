@@ -50,32 +50,33 @@ defmodule APNS.FeedbackHandlerTest do
     assert result == {:error, {:connection_failed, "feedback.apple:2196"}}
   end
 
-  @tag :pending # how to construct input token?
   test "handle_response calls callback with token", %{state: state, token: token} do
-    state = Map.put(state, :buffer_feedback, feedback_frame(String.upcase(token)))
+    state = Map.put(state, :buffer_feedback, feedback_frame(token))
 
     output = capture_log(fn -> FeedbackHandler.handle_response(state, "socket", "") end)
-    assert output =~ ~s("[APNS] Feedback received for token #{token})
+    assert output =~ ~s("[APNS] Feedback received for token #{String.upcase(token)})
   end
 
-  # TODO: give correct token input
   test "handle_response iterates", %{state: state} do
     buffer = <<
-      feedback_frame("1becf2320bcd26819f96d2d75d58b5e81b11243286bc8e21f54c374aa44a9151") :: binary,
+      feedback_frame("1becf2320bcd26819f96d2d75d58b5e81b11243286bc8e21f54c374aa44a9155") :: binary,
       feedback_frame("2becf2320bcd26819f96d2d75d58b5e81b11243286bc8e21f54c374aa44a9155") :: binary,
       feedback_frame("3becf2320bcd26819f96d2d75d58b5e81b11243286bc8e21f54c374aa44a9155") :: binary
     >>
     state = Map.put(state, :buffer_feedback, buffer)
 
     output = capture_log(fn -> FeedbackHandler.handle_response(state, "socket", "") end)
-    assert output =~ ~s("[APNS] Feedback received for token 31)
-    assert output =~ ~s("[APNS] Feedback received for token 32)
-    assert output =~ ~s("[APNS] Feedback received for token 33)
+    assert output =~ ~s("[APNS] Feedback received for token 1BECF2320BCD26819F96D2D75D58B5E81B11243286BC8E21F54C374AA44A9155)
+    assert output =~ ~s("[APNS] Feedback received for token 2BECF2320BCD26819F96D2D75D58B5E81B11243286BC8E21F54C374AA44A9155)
+    assert output =~ ~s("[APNS] Feedback received for token 3BECF2320BCD26819F96D2D75D58B5E81B11243286BC8E21F54C374AA44A9155)
   end
 
   defp feedback_frame(token) do
     time = 1458749245
-    token_length = 64
-    <<time :: 32, token_length :: 16, token :: size(token_length)-binary>>
+    token_length = 32
+    string_token = String.upcase(token)
+    { :ok, <<binary_token :: 32-binary>> } = Base.decode16(string_token)
+
+    <<time :: 32, token_length :: 16, binary_token :: size(token_length)-binary>>
   end
 end
