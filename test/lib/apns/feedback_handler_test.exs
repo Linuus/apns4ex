@@ -42,7 +42,7 @@ defmodule APNS.FeedbackHandlerTest do
   end
 
   test "connect returns ok if connection succeeded", %{state: state} do
-    assert FeedbackHandler.connect(state, FakeSender) == {:ok, %{}}
+    assert {:ok, %{config: %{feedback_host: "feedback.apple"}}} = FeedbackHandler.connect(state, FakeSender)
   end
 
   test "connect returns error if connection failed", %{state: state} do

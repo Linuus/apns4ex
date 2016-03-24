@@ -12,7 +12,7 @@ defmodule APNS.FeedbackHandler do
     case sender.connect_socket(host, port, opts, timeout) do
       {:ok, socket} ->
         Logger.debug "[APNS] connected to #{address}"
-        {:ok, socket}
+        {:ok, %{state | socket_feedback: socket}}
       {:error, reason} ->
         Logger.error "[APNS] failed to connect to feedback socket #{address}, reason given: #{inspect reason}"
         {:error, {:connection_failed, address}}

@@ -3,6 +3,7 @@ defmodule APNS.MessageHandler do
 
   @payload_max_old 256
   @payload_max_new 2048
+  @invalid_payload_size_code 7
 
   def connect(%{config: config, ssl_opts: opts} = state, sender \\ APNS.Sender) do
     sender.close(state.socket_apple)
@@ -14,7 +15,7 @@ defmodule APNS.MessageHandler do
     case sender.connect_socket(host, port, opts, timeout) do
       {:ok, socket} ->
         Logger.debug "[APNS] connected to #{address}"
-        {:ok, socket}
+        {:ok, %{state | socket_apple: socket, counter: 0}}
       {:error, reason} ->
         Logger.error "[APNS] failed to connect to push socket #{address}, reason given: #{inspect(reason)}"
         {:error, {:connection_failed, address}}
@@ -37,7 +38,7 @@ defmodule APNS.MessageHandler do
 
     case APNS.Payload.build_json(msg, limit) do
       {:error, :payload_size_exceeded} ->
-        APNS.Error.new(msg.id, 7) |> state.config.callback_module.error()
+        APNS.Error.new(msg.id, @invalid_payload_size_code) |> state.config.callback_module.error()
         state
 
       payload ->

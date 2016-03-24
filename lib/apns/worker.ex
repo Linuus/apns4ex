@@ -15,20 +15,20 @@ defmodule APNS.Worker do
 
   def handle_info(:connect_apple, %{config: %{timeout: timeout}} = state) do
     case APNS.MessageHandler.connect(state) do
-      {:ok, socket} ->
-        {:noreply, %{state | socket_apple: socket, counter: 0}}
+      {:ok, state} ->
+        {:noreply, state}
       {:error, reason} ->
-        :timer.sleep(timeout * 1000) # TODO: why?
+        sleep(timeout)
         {:stop, reason, state}
     end
   end
 
-  def handle_info(:connect_feedback, %{config: config} = state) do
+  def handle_info(:connect_feedback, %{config: %{timeout: timeout}} = state) do
     case APNS.FeedbackHandler.connect(state) do
-      {:ok, socket} ->
-        {:noreply, %{state | socket_feedback: socket}}
+      {:ok, state} ->
+        {:noreply, state}
       {:error, reason} ->
-        :timer.sleep(config.timeout * 1000) # TODO: why?
+        sleep(timeout)
         {:stop, reason, state}
     end
   end
@@ -39,7 +39,7 @@ defmodule APNS.Worker do
 
   def handle_info({:ssl_closed, socket}, %{socket_feedback: socket, config: %{feedback_interval: interval}} = state) do
     Logger.debug "[APNS] Feedback socket was closed. Reconnect in #{interval} seconds"
-    :erlang.send_after(interval * 1000, self, :connect_feedback)
+    send_after(interval, :connect_feedback)
     {:noreply, %{state | socket_feedback: nil}}
   end
 
@@ -53,5 +53,13 @@ defmodule APNS.Worker do
 
   def handle_cast(msg, state) do
     {:noreply, APNS.MessageHandler.push(msg, state)}
+  end
+
+  defp sleep(seconds) do
+    :timer.sleep(seconds * 1000)
+  end
+
+  defp send_after(seconds, message) do
+    :erlang.send_after(seconds * 1000, self, message)
   end
 end
