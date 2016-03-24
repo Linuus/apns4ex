@@ -3,8 +3,7 @@ use Mix.Config
 config :apns,
   callback_module:  APNS.Callback,
   timeout:          30,
-  feedback_interval: 1200,
-  reconnect_after:  1000,
+  reconnect_after:  1100,
   support_old_ios:  true,
   pools: [
     test: [

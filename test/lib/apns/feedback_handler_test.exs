@@ -52,7 +52,7 @@ defmodule APNS.FeedbackHandlerTest do
 
   @tag :pending # how to construct input token?
   test "handle_response calls callback with token", %{state: state, token: token} do
-    state = Map.put(state, :buffer_feedback, feedback_frame(token))
+    state = Map.put(state, :buffer_feedback, feedback_frame(String.upcase(token)))
 
     output = capture_log(fn -> FeedbackHandler.handle_response(state, "socket", "") end)
     assert output =~ ~s("[APNS] Feedback received for token #{token})
