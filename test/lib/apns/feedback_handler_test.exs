@@ -38,7 +38,7 @@ defmodule APNS.FeedbackHandlerTest do
     assert output =~ ~s(host: 'feedback.apple')
     assert output =~ ~s(port: 2196)
     assert output =~ ~s(opts: [])
-    assert output =~ ~s(timeout: 9000)
+    assert output =~ ~s(timeout: 9)
   end
 
   test "connect returns ok if connection succeeded", %{state: state} do
@@ -75,7 +75,7 @@ defmodule APNS.FeedbackHandlerTest do
     time = 1458749245
     token_length = 32
     string_token = String.upcase(token)
-    { :ok, <<binary_token :: 32-binary>> } = Base.decode16(string_token)
+    {:ok, <<binary_token :: 32-binary>>} = Base.decode16(string_token)
 
     <<time :: 32, token_length :: 16, binary_token :: size(token_length)-binary>>
   end

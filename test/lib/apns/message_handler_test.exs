@@ -53,7 +53,7 @@ defmodule APNS.MessageHandlerTest do
     assert output =~ ~s(host: 'host.apple')
     assert output =~ ~s(port: 2195)
     assert output =~ ~s(opts: %{})
-    assert output =~ ~s(timeout: 10000)
+    assert output =~ ~s(timeout: 10)
   end
 
   test "connect returns ok if connection succeeded", %{state: state} do

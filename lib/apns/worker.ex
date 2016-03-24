@@ -38,7 +38,7 @@ defmodule APNS.Worker do
   end
 
   def handle_info({:ssl_closed, socket}, %{socket_feedback: socket, config: %{feedback_interval: interval}} = state) do
-    Logger.debug "[APNS] Feedback socket was closed. Reconnect in #{interval} seconds"
+    Logger.debug("[APNS] Feedback socket was closed. Reconnect in #{interval} seconds")
     send_after(interval, :connect_feedback)
     {:noreply, %{state | socket_feedback: nil}}
   end

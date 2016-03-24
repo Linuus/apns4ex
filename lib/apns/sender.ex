@@ -17,8 +17,17 @@ defmodule APNS.Sender do
     result
   end
 
-  def connect_socket(host, port, opts, timeout) do
-    :ssl.connect(host, port, opts, timeout)
+  def connect_socket(host, port, opts, timeout_seconds) do
+    address = "#{host}:#{port}"
+
+    case :ssl.connect(host, port, opts, timeout_seconds * 1000) do
+      {:ok, socket} ->
+        Logger.debug("[APNS] connected to #{address}")
+        {:ok, socket}
+      {:error, reason} ->
+        Logger.error "[APNS] failed to connect to push socket #{address}, reason given: #{inspect(reason)}"
+        {:error, {:connection_failed, address}}
+    end
   end
 
   def close(nil) do

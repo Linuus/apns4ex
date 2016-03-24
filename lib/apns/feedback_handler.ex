@@ -6,16 +6,10 @@ defmodule APNS.FeedbackHandler do
     host = to_char_list(config.feedback_host)
     port = config.feedback_port
     opts = Keyword.delete(opts, :reuse_sessions)
-    timeout = config.timeout * 1000
-    address = "#{config.feedback_host}:#{config.feedback_port}"
 
-    case sender.connect_socket(host, port, opts, timeout) do
-      {:ok, socket} ->
-        Logger.debug "[APNS] connected to #{address}"
-        {:ok, %{state | socket_feedback: socket}}
-      {:error, reason} ->
-        Logger.error "[APNS] failed to connect to feedback socket #{address}, reason given: #{inspect reason}"
-        {:error, {:connection_failed, address}}
+    case sender.connect_socket(host, port, opts, config.timeout) do
+      {:ok, socket} -> {:ok, %{state | socket_feedback: socket}}
+      {:error, reason} -> {:error, reason}
     end
   end
 

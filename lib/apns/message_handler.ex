@@ -9,16 +9,10 @@ defmodule APNS.MessageHandler do
     sender.close(state.socket_apple)
     host = to_char_list(config.apple_host)
     port = config.apple_port
-    timeout = config.timeout * 1000
-    address = "#{config.apple_host}:#{config.apple_port}"
 
-    case sender.connect_socket(host, port, opts, timeout) do
-      {:ok, socket} ->
-        Logger.debug "[APNS] connected to #{address}"
-        {:ok, %{state | socket_apple: socket, counter: 0}}
-      {:error, reason} ->
-        Logger.error "[APNS] failed to connect to push socket #{address}, reason given: #{inspect(reason)}"
-        {:error, {:connection_failed, address}}
+    case sender.connect_socket(host, port, opts, config.timeout) do
+      {:ok, socket} -> {:ok, %{state | socket_apple: socket, counter: 0}}
+      {:error, reason} -> {:error, reason}
     end
   end
 

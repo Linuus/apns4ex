@@ -36,7 +36,7 @@ defmodule APNS.FakeSenderConnectFail do
 
   def connect_socket(host, port, opts, timeout) do
     APNS.FakeSender.connect_socket(host, port, opts, timeout)
-    {:error, "APNS.FakeSenderConnectFail"}
+    {:error, {:connection_failed, "#{host}:#{port}"}}
   end
 
   def send_package(socket, binary_payload, message, queue) do

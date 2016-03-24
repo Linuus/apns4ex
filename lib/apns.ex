@@ -2,9 +2,11 @@ defmodule APNS do
   use Application
 
   def push(pool, token, alert) do
-    message = APNS.Message.new
-    |> Map.put(:token, token)
-    |> Map.put(:alert, alert)
+    message =
+      APNS.Message.new
+      |> Map.put(:token, token)
+      |> Map.put(:alert, alert)
+
     push(pool, message)
   end
 
@@ -38,6 +40,6 @@ defmodule APNS do
   end
 
   def pool_name(name) do
-    "APNS.Pool.#{to_string(name)}" |> String.to_atom
+    String.to_atom("APNS.Pool.#{to_string(name)}")
   end
 end
