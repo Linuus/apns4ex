@@ -165,11 +165,11 @@ defmodule APNS.MessageHandlerTest do
   end
 
   test "handle_response retries messages later in queue", %{queue_pid: queue_pid} do
-    msg1 = %APNS.Message{id: 1}
-    msg2 = %APNS.Message{id: "1234"}
-    msg3 = %APNS.Message{id: 3}
-    msg4 = %APNS.Message{id: 4}
-    Agent.update(queue_pid, fn(_) -> [msg4, msg3, msg2, msg1] end)
+    message1 = %APNS.Message{id: 1}
+    message2 = %APNS.Message{id: "1234"}
+    message3 = %APNS.Message{id: 3}
+    message4 = %APNS.Message{id: 4}
+    Agent.update(queue_pid, fn(_) -> [message4, message3, message2, message1] end)
 
     MessageHandler.handle_response(response_state(8, queue_pid), "socket", "", self())
 

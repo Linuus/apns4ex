@@ -24,26 +24,26 @@ defmodule APNS.MessageHandler do
 
   def push(_message, _state, sender \\ APNS.Sender)
 
-  def push(%APNS.Message{token: token} = msg, state, _sender) when byte_size(token) != 64 do
-    APNS.Error.new(msg.id, 5) |> state.config.callback_module.error()
+  def push(%APNS.Message{token: token} = message, state, _sender) when byte_size(token) != 64 do
+    APNS.Error.new(message.id, 5) |> state.config.callback_module.error()
     state
   end
 
-  def push(%APNS.Message{} = msg, %{config: config, socket_apple: socket, queue: queue} = state, sender) do
-    limit = case msg.support_old_ios do
+  def push(%APNS.Message{} = message, %{config: config, socket_apple: socket, queue: queue} = state, sender) do
+    limit = case message.support_old_ios do
       nil -> config.payload_limit
       true -> @payload_max_old
       false -> @payload_max_new
     end
 
-    case APNS.Payload.build_json(msg, limit) do
+    case APNS.Payload.build_json(message, limit) do
       {:error, :payload_size_exceeded} ->
-        APNS.Error.new(msg.id, @invalid_payload_size_code) |> state.config.callback_module.error()
+        APNS.Error.new(message.id, @invalid_payload_size_code) |> state.config.callback_module.error()
         state
 
       payload ->
-        binary_payload = APNS.Payload.to_binary(msg, payload)
-        sender.send_package(socket, binary_payload, msg, queue)
+        binary_payload = APNS.Payload.to_binary(message, payload)
+        sender.send_package(socket, binary_payload, message, queue)
 
         if state.counter >= state.config.reconnect_after do
           Logger.debug("[APNS] #{state.counter} messages sent, reconnecting")
@@ -56,10 +56,10 @@ defmodule APNS.MessageHandler do
 
   def handle_response(state, socket, data, worker_pid \\ self()) do
     case <<state.buffer_apple :: binary, data :: binary>> do
-      <<8 :: 8, status :: 8, msg_id :: binary-4, rest :: binary>> ->
-        APNS.Error.new(msg_id, status) |> state.config.callback_module.error()
+      <<8 :: 8, status :: 8, message_id :: binary-4, rest :: binary>> ->
+        APNS.Error.new(message_id, status) |> state.config.callback_module.error()
 
-        for message <- APNS.Queue.messages_after(state.queue, msg_id) do
+        for message <- APNS.Queue.messages_after(state.queue, message_id) do
           GenServer.cast(worker_pid, message)
         end
 

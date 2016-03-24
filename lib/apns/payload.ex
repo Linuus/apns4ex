@@ -1,31 +1,31 @@
 defmodule APNS.Payload do
-  def build_json(msg, limit) do
+  def build_json(message, limit) do
     payload = %{aps: %{}}
 
-    if msg.sound do
-      payload = put_in(payload[:aps][:sound], msg.sound)
+    if message.sound do
+      payload = put_in(payload[:aps][:sound], message.sound)
     end
 
-    if msg.category != nil do
-      payload = put_in(payload[:aps][:category], msg.category)
+    if message.category != nil do
+      payload = put_in(payload[:aps][:category], message.category)
     end
 
-    if msg.badge != nil do
-      payload = put_in(payload[:aps][:badge], msg.badge)
+    if message.badge != nil do
+      payload = put_in(payload[:aps][:badge], message.badge)
     end
 
-    if msg.content_available != nil do
-      payload = put_in(payload[:aps][:'content-available'], msg.content_available)
+    if message.content_available != nil do
+      payload = put_in(payload[:aps][:'content-available'], message.content_available)
     end
 
-    if msg.extra != [] do
-      payload = Map.merge(payload, msg.extra)
+    if message.extra != [] do
+      payload = Map.merge(payload, message.extra)
     end
 
-    if is_binary(msg.alert) do
-      payload = put_in(payload[:aps][:alert], msg.alert)
+    if is_binary(message.alert) do
+      payload = put_in(payload[:aps][:alert], message.alert)
     else
-      payload = put_in(payload[:aps][:alert], format_loc(msg.alert))
+      payload = put_in(payload[:aps][:alert], format_loc(message.alert))
     end
 
     json = Poison.encode!(payload)
@@ -45,8 +45,8 @@ defmodule APNS.Payload do
     end
   end
 
-  def to_binary(msg, payload) do
-    token_bin = msg.token |> Base.decode16!(case: :mixed)
+  def to_binary(message, payload) do
+    token_bin = message.token |> Base.decode16!(case: :mixed)
 
     frame = <<
       1                  :: 8,
@@ -57,13 +57,13 @@ defmodule APNS.Payload do
       payload            :: binary,
       3                  :: 8,
       4                  :: 16,
-      msg.id             :: 32,
+      message.id             :: 32,
       4                  :: 8,
       4                  :: 16,
-      msg.expiry         :: 32,
+      message.expiry         :: 32,
       5                  :: 8,
       1                  :: 16,
-      msg.priority       :: 8
+      message.priority       :: 8
     >>
 
     <<

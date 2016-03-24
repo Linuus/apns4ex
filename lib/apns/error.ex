@@ -19,9 +19,9 @@ defmodule APNS.Error do
     error: nil
   ]
 
-  def new(msg_id, status) do
+  def new(message_id, status) do
     %__MODULE__{
-      message_id: msg_id,
+      message_id: message_id,
       status: status,
       error: @statuses[status]
     }

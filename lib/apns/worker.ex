@@ -51,8 +51,8 @@ defmodule APNS.Worker do
     {:noreply, APNS.FeedbackHandler.handle_response(state, socket, data)}
   end
 
-  def handle_cast(msg, state) do
-    {:noreply, APNS.MessageHandler.push(msg, state)}
+  def handle_cast(message, state) do
+    {:noreply, APNS.MessageHandler.push(message, state)}
   end
 
   defp sleep(seconds) do
