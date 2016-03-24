@@ -58,6 +58,10 @@ defmodule APNS.Configuration do
       ssl_opts = Dict.put(ssl_opts, :certfile, certfile_path(config.certfile))
     end
 
+    if config.cert_password != nil do
+      ssl_opts = Dict.put(ssl_opts, :password, to_char_list(config.cert_password))
+    end
+
     if config.cert != nil do
       case :public_key.pem_decode(config.cert) do
         [{:Certificate, certDer, _}] -> ssl_opts = Dict.put(ssl_opts, :cert, certDer)
@@ -72,10 +76,6 @@ defmodule APNS.Configuration do
 
     if config.keyfile != nil do
       ssl_opts = Dict.put(ssl_opts, :keyfile, Path.absname(config.keyfile))
-    end
-
-    if config.cert_password != nil do
-      ssl_opts = Dict.put(ssl_opts, :password, to_char_list(config.cert_password))
     end
 
     {:ok, queue_pid} = APNS.Queue.start_link
