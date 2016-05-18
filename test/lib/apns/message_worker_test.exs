@@ -24,6 +24,7 @@ defmodule APNS.MessageWorkerTest do
       ssl_opts: [],
       counter: 0,
       queue: [],
+      connection_counter: 0,
       pool: :test
     }
     token = "1becf2320bcd26819f96d2d75d58b5e81b11243286bc8e21f54c374aa44a9155"
@@ -81,6 +82,7 @@ defmodule APNS.MessageWorkerTest do
 
   test "connect returns error if connection failed", %{state: state} do
     result = MessageWorker.connect(:anything, state, APNS.FakeSenderConnectFail)
+    state = %{state | connection_counter: 1}
     assert result == {:backoff, 1000, state}
   end
 

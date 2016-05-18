@@ -9,6 +9,7 @@ defmodule APNS.State do
       buffer_feedback: "",
       buffer_apple: "",
       queue: [],
+      connection_counter: 0,
       counter: 0
     }
   end

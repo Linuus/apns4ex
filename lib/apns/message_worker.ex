@@ -28,10 +28,16 @@ defmodule APNS.MessageWorker do
     case sender.connect_socket(host, port, opts, config.timeout) do
       {:ok, socket} ->
         APNS.Logger.debug("successfully connected to socket")
-        {:ok, %{state | socket_apple: socket, counter: 0, queue: []}}
+        {:ok, %{state | socket_apple: socket, counter: 0, queue: [], connection_counter: 0}}
       {:error, _} ->
-        APNS.Logger.warn("unable to connect to socket, backing off")
-        {:backoff, 1000, state}
+        if state.connection_counter > 50 do
+          {:stop, "Cannot connect to Apple socket", state}
+        else
+          new_counter = state.connection_counter + 1
+          backoff_time = new_counter * new_counter * 1000
+          APNS.Logger.warn("unable to connect to socket, backing off with backoff time: #{backoff_time} new counter #{new_counter}")
+          {:backoff, backoff_time, %{state | connection_counter: new_counter}}
+        end
     end
   end
 

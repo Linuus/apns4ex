@@ -29,8 +29,15 @@ defmodule APNS.FeedbackWorker do
         APNS.Logger.info("successfully opened connection to feedback service")
         {:ok, %{state | socket_feedback: socket}}
       {:error, reason} ->
-        APNS.Logger.warn("error (#{inspect(reason)}) opening connection to feedback service")
-        {:backoff, 1000, state}
+        if state.connection_counter > 50 do
+          {:stop, "Cannot connect to Apple feedback socket", state}
+        else
+          new_counter = state.connection_counter + 1
+          backoff_time = new_counter * new_counter * 1000
+
+          APNS.Logger.warn("error (#{inspect(reason)}) opening connection to feedback service, backing off with backoff time: #{backoff_time} new counter #{new_counter}")
+          {:backoff, backoff_time, %{state | connection_counter: new_counter}}
+        end
     end
   end
 
